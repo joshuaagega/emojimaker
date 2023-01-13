@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.emojimaker.creator">
+
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+    <uses-permission android:name="android.permission.Ad_ID" />
+    <application
+        android:name="com.emojimaker.creator.Appliction"
+        android:allowBackup="true"
+        android:icon="@drawable/icon"
+        android:label="@string/app_name"
+        android:requestLegacyExternalStorage="true"
+        android:supportsRtl="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name="com.emojimaker.creator.MainActivity"
+            android:exported="true"
+            android:screenOrientation="fullSensor">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.emojimaker.creator.ActivityEmojiMaker"
+            android:exported="true"
+            android:screenOrientation="fullSensor" />
+        <activity
+            android:name="com.emojimaker.creator.ActivityCustomizeSmileys"
+            android:exported="true"
+            android:screenOrientation="fullSensor" />
+
+        <activity
+            android:name="com.emojimaker.creator.ActivityAlbum"
+            android:exported="true"
+            android:screenOrientation="fullSensor" />
+        <activity
+            android:name="com.emojimaker.creator.ActivityShowAlbum"
+            android:exported="true"
+            android:screenOrientation="fullSensor" />
+        <activity android:name="com.soundcloud.android.crop.CropImageActivity"
+            android:exported="true"/>
+        <activity android:name="com.emojimaker.creator.ActivityMySmileys"
+            android:exported="true"/>
+        <activity android:name="com.emojimaker.creator.EmojiShopActivity"
+            android:exported="true"/>
+
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/provider_paths" />
+        </provider>
+
+        <meta-data
+            android:name="com.google.android.gms.ads.AD_MANAGER_APP"
+            android:value="true" />
+    </application>
+
+</manifest>
