@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.GridView;
@@ -12,6 +13,10 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 
+import com.applovin.mediation.MaxAd;
+import com.applovin.mediation.MaxAdListener;
+import com.applovin.mediation.MaxError;
+import com.applovin.mediation.ads.MaxInterstitialAd;
 import com.emojimaker.creator.adapter.AlbumAdapter;
 import com.emojimaker.creator.customview.RobotoRegularTextView;
 import com.emojimaker.creator.item.ItemPhoto;
@@ -20,15 +25,18 @@ import com.emojimaker.creator.ultis.UltilsMethod;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.concurrent.TimeUnit;
 
 
-public class ActivityMySmileys extends Activity implements View.OnClickListener {
+public class ActivityMySmileys extends Activity implements View.OnClickListener, MaxAdListener {
     private AlbumAdapter albumAdapter;
     private ArrayList<ItemPhoto> arrPhoto;
     private GridView gvSmileys;
     private boolean isDelete;
     private RobotoRegularTextView tvNoPhoto;
     private UltilsMethod ultilsMethod;
+    private MaxInterstitialAd interstitialAd;
+    private int retryAttempt;
 
     @Override
     protected void onCreate(@Nullable Bundle bundle) {
@@ -39,9 +47,9 @@ public class ActivityMySmileys extends Activity implements View.OnClickListener 
 
 
 
-
-        AdAdmob adAdmob = new AdAdmob(this);
-        adAdmob.FullscreenAd(this);
+//
+//        AdAdmob adAdmob = new AdAdmob(this);
+//        adAdmob.FullscreenAd(this);
 
 
         findViewById(R.id.imgBack).setOnClickListener(this);
@@ -119,6 +127,10 @@ public class ActivityMySmileys extends Activity implements View.OnClickListener 
             this.albumAdapter.setWallpaper(false);
             this.albumAdapter.setDataChanges(this.arrPhoto);
         }
+        if ( interstitialAd.isReady() )
+        {
+            interstitialAd.showAd();
+        }
     }
 
     @Override
@@ -130,5 +142,55 @@ public class ActivityMySmileys extends Activity implements View.OnClickListener 
             return;
         }
         super.onBackPressed();
+    }
+    void createInterstitialAd()
+    {
+        interstitialAd = new MaxInterstitialAd( "1207a2f2caaf1728", this );
+        interstitialAd.setListener( this );
+
+        // Load the first ad
+        interstitialAd.loadAd();
+    }
+    @Override
+    public void onAdLoaded(MaxAd ad) {
+        retryAttempt = 0;
+
+    }
+
+    @Override
+    public void onAdDisplayed(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdHidden(MaxAd ad) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdClicked(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdLoadFailed(String adUnitId, MaxError error) {
+        retryAttempt++;
+        long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, retryAttempt ) ) );
+
+        new Handler().postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                interstitialAd.loadAd();
+            }
+        }, delayMillis );
+    }
+
+    @Override
+    public void onAdDisplayFailed(MaxAd ad, MaxError error) {
+        interstitialAd.loadAd();
+
     }
 }

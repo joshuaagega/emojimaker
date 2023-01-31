@@ -28,4 +28,5 @@
     <dimen name="text_sz_19sp">19sp</dimen>
     <dimen name="text_sz_20sp">20sp</dimen>
     <dimen name="text_sz_23sp">23sp</dimen>
+    <dimen name="banner_height">50</dimen>
 </resources>

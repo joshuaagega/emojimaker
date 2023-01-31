@@ -10,6 +10,7 @@ import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 
+import android.os.Handler;
 import android.util.DisplayMetrics;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,6 +29,10 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 
+import com.applovin.mediation.MaxAd;
+import com.applovin.mediation.MaxAdListener;
+import com.applovin.mediation.MaxError;
+import com.applovin.mediation.ads.MaxInterstitialAd;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
@@ -54,12 +59,13 @@ import it.sephiroth.android.library.widget.HListView;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import uz.shift.colorpicker.LineColorPicker;
 import uz.shift.colorpicker.OnColorChangedListener;
 
 
-public class EmojiShopActivity extends Activity implements View.OnClickListener, AdapterView.OnItemClickListener {
+public class EmojiShopActivity extends Activity implements View.OnClickListener, AdapterView.OnItemClickListener, MaxAdListener {
     private static String nameShape;
 
     private ArrayList<String> arrFonts;
@@ -104,7 +110,8 @@ public class EmojiShopActivity extends Activity implements View.OnClickListener,
     private int[] listTabNonSelect = {R.drawable.ic_shape, R.drawable.ic_text1, R.drawable.ic_keyboard};
     private int[] listTabInputText = {R.drawable.ic_keyboard_active, R.drawable.ic_shape2_active, R.drawable.ic_symbols_active, R.drawable.ic_numbers_active};
     private int[] listTabNonSelectInputText = {R.drawable.ic_keyboard2, R.drawable.ic_shape_text, R.drawable.ic_symbols, R.drawable.ic_numbers};
-
+    private MaxInterstitialAd interstitialAd;
+    private int retryAttempt;
     @Override 
     protected void onCreate(@Nullable Bundle bundle) {
         super.onCreate(bundle);
@@ -112,6 +119,7 @@ public class EmojiShopActivity extends Activity implements View.OnClickListener,
         getWindow().setFlags(1024, 1024);
         setContentView(R.layout.layout_emojishop_activity);
         findView();
+        createInterstitialAd();
     }
 
     private void findView() {
@@ -344,7 +352,12 @@ public class EmojiShopActivity extends Activity implements View.OnClickListener,
                         EmojiShopActivity.this.positionTabSymbol = 2;
                         EmojiShopActivity.this.symboldTextAdapters.setData((String[]) EmojiShopActivity.this.arrListSymbols.get(2));
                     }
+                    if ( interstitialAd.isReady() )
+                    {
+                        interstitialAd.showAd();
+                    }
                 }
+
             });
         }
         this.grvSymbol.setOnItemClickListener(new AdapterView.OnItemClickListener() { 
@@ -388,6 +401,10 @@ public class EmojiShopActivity extends Activity implements View.OnClickListener,
             }
         });
         dialog.show();
+        if ( interstitialAd.isReady() )
+        {
+            interstitialAd.showAd();
+        }
     }
 
     @Override 
@@ -430,10 +447,63 @@ public class EmojiShopActivity extends Activity implements View.OnClickListener,
             this.emojiAdapter.positionChange(i);
             this.symboldTextAdapters.setEmoji(nameShape);
         }
+
+    }
+    void createInterstitialAd()
+    {
+        interstitialAd = new MaxInterstitialAd( "24ad40ba8567d809", this );
+        interstitialAd.setListener( this );
+
+        // Load the first ad
+        interstitialAd.loadAd();
+    }
+    @Override
+    public void onAdLoaded(MaxAd ad) {
+        retryAttempt = 0;
+
     }
 
-    
-    
+    @Override
+    public void onAdDisplayed(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdHidden(MaxAd ad) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdClicked(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdLoadFailed(String adUnitId, MaxError error) {
+        // Interstitial ad failed to load
+        // AppLovin recommends that you retry with exponentially higher delays up to a maximum delay (in this case 64 seconds)
+
+        retryAttempt++;
+        long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, retryAttempt ) ) );
+
+        new Handler().postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                interstitialAd.loadAd();
+            }
+        }, delayMillis );
+    }
+
+    @Override
+    public void onAdDisplayFailed(MaxAd ad, MaxError error) {
+        interstitialAd.loadAd();
+
+    }
+
+
     public class getEmojiShop extends AsyncTask<Void, Void, Void> {
         private getEmojiShop() {
         }
@@ -518,6 +588,10 @@ public class EmojiShopActivity extends Activity implements View.OnClickListener,
                 this.ultilsMethod.SaveBoolean(this.sharedPreferences, Constant.KEY_FIRST_CREATE, false);
             }
         }
+//        if ( interstitialAd.isReady() )
+//        {
+//            interstitialAd.showAd();
+//        }
     }
 
     

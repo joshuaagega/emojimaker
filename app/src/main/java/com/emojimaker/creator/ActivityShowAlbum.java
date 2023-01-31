@@ -3,10 +3,14 @@ package com.emojimaker.creator;
 import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Bundle;
 
+import android.os.Handler;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -18,6 +22,12 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager.widget.ViewPager;
 
+import com.applovin.mediation.MaxAd;
+import com.applovin.mediation.MaxAdListener;
+import com.applovin.mediation.MaxAdViewAdListener;
+import com.applovin.mediation.MaxError;
+import com.applovin.mediation.ads.MaxAdView;
+import com.applovin.mediation.ads.MaxInterstitialAd;
 import com.emojimaker.creator.adapter.AdapterPreViewAlbum;
 import com.emojimaker.creator.adapter.PhotoShowPager;
 import com.emojimaker.creator.item.ItemPhoto;
@@ -25,9 +35,10 @@ import com.emojimaker.creator.ultis.Constant;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
 
-public class ActivityShowAlbum extends AppCompatActivity implements View.OnClickListener {
+public class ActivityShowAlbum extends AppCompatActivity implements View.OnClickListener, MaxAdListener, MaxAdViewAdListener {
     private AdapterPreViewAlbum adapterPreViewAlbum;
     private ArrayList<ItemPhoto> arrPhoto;
     PhotoShowPager photoShowPager;
@@ -35,20 +46,44 @@ public class ActivityShowAlbum extends AppCompatActivity implements View.OnClick
     private RecyclerView rvPreview;
     private TextView textViewTitle;
     private ViewPager viewPager;
+    private MaxInterstitialAd interstitialAd;
+    private int retryAttempt;
+
+//    private MaxAdView adView;
+//    void createBannerAd()
+//    {
+//        adView = new MaxAdView( "02525f2102dcb937", this );
+//        adView.setListener( this );
+//
+//        // Stretch to the width of the screen for banners to be fully functional
+//        int width = ViewGroup.LayoutParams.MATCH_PARENT;
+//
+//        // Banner height on phones and tablets is 50 and 90, respectively
+//        int heightPx = getResources().getDimensionPixelSize( R.dimen.banner_height );
+//
+//        adView.setLayoutParams( new FrameLayout.LayoutParams( width, heightPx ) );
+//
+//        // Set background or background color for banners to be fully functional
+//        adView.setBackgroundColor(Color.TRANSPARENT);
+//
+//        ViewGroup rootView = findViewById( android.R.id.content );
+//        rootView.addView( adView );
+//
+//        // Load the ad
+//        adView.loadAd();
+//    }
 
 
     @Override
 
     public void onCreate(@Nullable Bundle bundle) {
         super.onCreate(bundle);
-        requestWindowFeature(1);
+        supportRequestWindowFeature(1);
         getWindow().setFlags(1024, 1024);
         setContentView(R.layout.activity_show_album);
 
 
-        AdAdmob adAdmob = new AdAdmob(this);
-        adAdmob.BannerAd((RelativeLayout) findViewById(R.id.bannerAd), this);
-        adAdmob.FullscreenAd(this);
+
 
         Intent intent = getIntent();
         if (intent != null) {
@@ -63,6 +98,7 @@ public class ActivityShowAlbum extends AppCompatActivity implements View.OnClick
             return;
         }
         finish();
+//        createBannerAd();
     }
 
     private void initView() {
@@ -81,7 +117,12 @@ public class ActivityShowAlbum extends AppCompatActivity implements View.OnClick
                 } else {
                     ActivityShowAlbum.this.rvPreview.setVisibility(View.GONE);
                 }
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
             }
+
         });
         this.viewPager.setOnPageChangeListener(new ViewPager.OnPageChangeListener() {
             @Override
@@ -137,6 +178,10 @@ public class ActivityShowAlbum extends AppCompatActivity implements View.OnClick
         } else if (id == R.id.imgShare) {
             sharePhoto(this.viewPager.getCurrentItem());
         }
+        if ( interstitialAd.isReady() )
+        {
+            interstitialAd.showAd();
+        }
     }
 
     void showConfirmRemoveEmoji(final int i) {
@@ -152,6 +197,10 @@ public class ActivityShowAlbum extends AppCompatActivity implements View.OnClick
                         ActivityShowAlbum.this.finish();
                     }
                 }
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
                 dialogInterface.dismiss();
             }
         }).setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {
@@ -160,6 +209,10 @@ public class ActivityShowAlbum extends AppCompatActivity implements View.OnClick
                 dialogInterface.dismiss();
             }
         }).create().show();
+        if ( interstitialAd.isReady() )
+        {
+            interstitialAd.showAd();
+        }
     }
 
     void sharePhoto(int i) {
@@ -172,5 +225,68 @@ public class ActivityShowAlbum extends AppCompatActivity implements View.OnClick
         startActivity(Intent.createChooser(intent, "Share this photo"));
         intent.putExtra("android.intent.extra.STREAM", uriForFile);
         startActivity(Intent.createChooser(intent, "Share"));
+    }
+    void createInterstitialAd()
+    {
+        interstitialAd = new MaxInterstitialAd( "6d34ab0494a6345e", this );
+        interstitialAd.setListener( this );
+
+        // Load the first ad
+        interstitialAd.loadAd();
+    }
+
+
+    @Override
+    public void onAdLoaded(MaxAd ad) {
+        retryAttempt = 0;
+
+    }
+
+    @Override
+    public void onAdDisplayed(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdHidden(MaxAd ad) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdClicked(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdLoadFailed(String adUnitId, MaxError error) {
+
+        retryAttempt++;
+        long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, retryAttempt ) ) );
+
+        new Handler().postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                interstitialAd.loadAd();
+            }
+        }, delayMillis );
+    }
+
+    @Override
+    public void onAdDisplayFailed(MaxAd ad, MaxError error) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdExpanded(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdCollapsed(MaxAd ad) {
+
     }
 }

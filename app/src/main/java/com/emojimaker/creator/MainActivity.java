@@ -3,14 +3,24 @@ package com.emojimaker.creator;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
 
 import androidx.core.app.ActivityCompat;
 
+import com.applovin.mediation.MaxAd;
+import com.applovin.mediation.MaxAdListener;
+import com.applovin.mediation.MaxAdViewAdListener;
+import com.applovin.mediation.MaxError;
+import com.applovin.mediation.ads.MaxAdView;
+import com.applovin.mediation.ads.MaxInterstitialAd;
 import com.emojimaker.creator.dialog.DialogLoading;
 import com.emojimaker.creator.librate.FeedbackDialog;
 import com.emojimaker.creator.librate.RatingDialog;
@@ -18,8 +28,10 @@ import com.emojimaker.creator.ultis.Constant;
 import com.emojimaker.creator.ultis.PermissionManager;
 import com.emojimaker.creator.ultis.UltilsMethod;
 
+import java.util.concurrent.TimeUnit;
 
-public class MainActivity extends Activity implements View.OnClickListener {
+
+public class MainActivity extends Activity implements View.OnClickListener, MaxAdListener, MaxAdViewAdListener {
     public static DialogLoading dialogLoading;
     private FeedbackDialog feedbackDialog;
     private LinearLayout layoutContrainButton;
@@ -27,6 +39,33 @@ public class MainActivity extends Activity implements View.OnClickListener {
     private RatingDialog mRatingDialog;
     private SharedPreferences sharedPreferences;
     private UltilsMethod ultilsMethod;
+    private MaxInterstitialAd interstitialAd;
+    private int retryAttempt;
+
+    private MaxAdView adView;
+    void createBannerAd()
+    {
+        adView = new MaxAdView( "35fc3e043ebfaca7", this );
+        adView.setListener( this );
+
+        // Stretch to the width of the screen for banners to be fully functional
+        int width = ViewGroup.LayoutParams.MATCH_PARENT;
+
+        // Banner height on phones and tablets is 50 and 90, respectively
+        int heightPx = getResources().getDimensionPixelSize( R.dimen.banner_height );
+
+        adView.setLayoutParams( new FrameLayout.LayoutParams( width, heightPx ) );
+
+        // Set background or background color for banners to be fully functional
+        adView.setBackgroundColor(Color.TRANSPARENT );
+
+        ViewGroup rootView = findViewById( android.R.id.content );
+        rootView.addView( adView );
+
+        // Load the ad
+        adView.loadAd();
+        createBannerAd();
+    }
 
     private void findViews() {
         findViewById(R.id.btnEmojiMacker).setOnClickListener(this);
@@ -91,9 +130,7 @@ public class MainActivity extends Activity implements View.OnClickListener {
         findViews();
         this.layoutContrainButton.getLayoutParams().height = ((getResources().getDisplayMetrics().widthPixels / 2) * 211) / 316;
 
-        AdAdmob adAdmob = new AdAdmob(this);
-        adAdmob.BannerAd((RelativeLayout) findViewById(R.id.bannerAd), this);
-
+        createInterstitialAd();
 
     }
 
@@ -104,20 +141,37 @@ public class MainActivity extends Activity implements View.OnClickListener {
                 dialogLoading = new DialogLoading(this, "Loading...");
                 dialogLoading.show();
                 startActivity(new Intent(this, ActivityEmojiMaker.class));
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
                 return;
             case R.id.btnMyEmoji:
                 startActivity(new Intent(this, ActivityAlbum.class));
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
                 return;
             case R.id.gifRate:
                 this.mRatingDialog.showDialog(false, this);
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
                 return;
 
             case R.id.imgTextInEmoji:
                 startActivity(new Intent(this, EmojiShopActivity.class));
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
                 return;
             default:
                 return;
         }
+
     }
 
     @Override
@@ -154,5 +208,66 @@ public class MainActivity extends Activity implements View.OnClickListener {
             super.onRequestPermissionsResult(i, strArr, iArr);
         }
     }
+    void createInterstitialAd()
+    {
+        interstitialAd = new MaxInterstitialAd( "1207a2f2caaf1728", this );
+        interstitialAd.setListener( this );
 
+        // Load the first ad
+        interstitialAd.loadAd();
+    }
+    @Override
+    public void onAdLoaded(MaxAd ad) {
+        retryAttempt = 0;
+    }
+
+    @Override
+    public void onAdDisplayed(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdHidden(MaxAd ad) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdClicked(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdLoadFailed(String adUnitId, MaxError error) {
+        // Interstitial ad failed to load
+        // AppLovin recommends that you retry with exponentially higher delays up to a maximum delay (in this case 64 seconds)
+
+        retryAttempt++;
+        long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, retryAttempt ) ) );
+
+        new Handler().postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                interstitialAd.loadAd();
+            }
+        }, delayMillis );
+    }
+
+    @Override
+    public void onAdDisplayFailed(MaxAd ad, MaxError error) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdExpanded(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdCollapsed(MaxAd ad) {
+
+    }
 }

@@ -68,9 +68,9 @@
                 android:resource="@xml/provider_paths" />
         </provider>
 
-        <meta-data
-            android:name="com.google.android.gms.ads.AD_MANAGER_APP"
-            android:value="true" />
+        <meta-data android:name="applovin.sdk.key"
+            android:value="lIf9VN4oRQNDu54FZ1Sr7DocsC0hcs-3ZD91eX-OXTxFK75Qg_EANzzxoKr9lxTdgIh3c-G5os5ykNx2gz4Q5x"/>
+
     </application>
 
 </manifest>

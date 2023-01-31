@@ -13,6 +13,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 
+import android.os.Handler;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.ListAdapter;
@@ -21,6 +22,10 @@ import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 
+import com.applovin.mediation.MaxAd;
+import com.applovin.mediation.MaxAdListener;
+import com.applovin.mediation.MaxError;
+import com.applovin.mediation.ads.MaxInterstitialAd;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
@@ -38,9 +43,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 
-public class ActivityCustomizeSmileys extends Activity implements View.OnClickListener, AdapterView.OnItemClickListener {
+public class ActivityCustomizeSmileys extends Activity implements View.OnClickListener, AdapterView.OnItemClickListener, MaxAdListener {
     int CAMERA_PIC_REQUEST = 589;
     Uri file;
     private HListView hlvShapeDemo;
@@ -54,6 +60,10 @@ public class ActivityCustomizeSmileys extends Activity implements View.OnClickLi
     private ShapeCutAdapter shapeCutAdapter;
     private SharedPreferences sharedPreferences;
     private UltilsMethod ultilsMethod;
+
+    private MaxInterstitialAd interstitialAd;
+    private int retryAttempt;
+
 
     private void findViews() {
         findViewById(R.id.imgBack).setOnClickListener(this);
@@ -84,10 +94,7 @@ public class ActivityCustomizeSmileys extends Activity implements View.OnClickLi
         getWindow().setFlags(1024, 1024);
         setContentView(R.layout.activity_layout_customize_smileys);
 
-        AdAdmob adAdmob = new AdAdmob(this);
-        adAdmob.FullscreenAd(this);
-
-
+        createInterstitialAd();
 
         findViews();
     }
@@ -130,6 +137,10 @@ public class ActivityCustomizeSmileys extends Activity implements View.OnClickLi
             openCamera();
         } else if (ActivityCompat.checkSelfPermission(this, "android.permission.CAMERA") != 0) {
             requestPermissions(new String[]{"android.permission.CAMERA"}, 12);
+        }
+        if ( interstitialAd.isReady() )
+        {
+            interstitialAd.showAd();
         }
     }
 
@@ -237,5 +248,55 @@ public class ActivityCustomizeSmileys extends Activity implements View.OnClickLi
         File createTempFile = File.createTempFile("JPEG_smiley_", ".jpg", getExternalFilesDir(Environment.DIRECTORY_PICTURES));
         this.mCurrentPhotoPath = createTempFile.getAbsolutePath();
         return createTempFile;
+    }
+    void createInterstitialAd()
+    {
+        interstitialAd = new MaxInterstitialAd( "6d34ab0494a6345e", this );
+        interstitialAd.setListener( this );
+
+        // Load the first ad
+        interstitialAd.loadAd();
+    }
+    @Override
+    public void onAdLoaded(MaxAd ad) {
+        retryAttempt = 0;
+
+    }
+
+    @Override
+    public void onAdDisplayed(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdHidden(MaxAd ad) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdClicked(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdLoadFailed(String adUnitId, MaxError error) {
+        retryAttempt++;
+        long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, retryAttempt ) ) );
+
+        new Handler().postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                interstitialAd.loadAd();
+            }
+        }, delayMillis );
+    }
+
+    @Override
+    public void onAdDisplayFailed(MaxAd ad, MaxError error) {
+        interstitialAd.loadAd();
+
     }
 }

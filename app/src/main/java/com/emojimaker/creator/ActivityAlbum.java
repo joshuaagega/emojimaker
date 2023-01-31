@@ -7,6 +7,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.Environment;
 
+import android.os.Handler;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.GridView;
@@ -19,6 +20,10 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.applovin.mediation.MaxAd;
+import com.applovin.mediation.MaxAdListener;
+import com.applovin.mediation.MaxError;
+import com.applovin.mediation.ads.MaxInterstitialAd;
 import com.emojimaker.creator.adapter.AlbumAdapter;
 import com.emojimaker.creator.item.ItemPhoto;
 import com.emojimaker.creator.librate.FeedbackDialog;
@@ -29,9 +34,10 @@ import com.emojimaker.creator.ultis.UltilsMethod;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.concurrent.TimeUnit;
 
 
-public class ActivityAlbum extends AppCompatActivity implements View.OnClickListener {
+public class ActivityAlbum extends AppCompatActivity implements View.OnClickListener, MaxAdListener {
     private AlbumAdapter adapterEmoji;
     private ArrayList<ItemPhoto> arrEmoji;
     private FeedbackDialog feedbackDialog;
@@ -44,6 +50,8 @@ public class ActivityAlbum extends AppCompatActivity implements View.OnClickList
     private TextView tvOk;
     private TextView tvWallpaper;
     private UltilsMethod ultilsMethod;
+    private MaxInterstitialAd interstitialAd;
+    private int retryAttempt;
 
 
     @Override
@@ -55,9 +63,9 @@ public class ActivityAlbum extends AppCompatActivity implements View.OnClickList
         setContentView(R.layout.activity_album);
 
 
-        AdAdmob adAdmob = new AdAdmob(this);
-        adAdmob.BannerAd((RelativeLayout) findViewById(R.id.ad_holder), this);
-        adAdmob.FullscreenAd(this);
+//        AdAdmob adAdmob = new AdAdmob(this);
+//        adAdmob.BannerAd((RelativeLayout) findViewById(R.id.ad_holder), this);
+//        adAdmob.FullscreenAd(this);
 
 
         getData();
@@ -142,6 +150,10 @@ public class ActivityAlbum extends AppCompatActivity implements View.OnClickList
         } else if (id == R.id.imgDelete) {
             buttonDeleteClicked();
         }
+//        if ( interstitialAd.isReady() )
+//        {
+//            interstitialAd.showAd();
+//        }
     }
 
     private void modeEmoji() {
@@ -205,11 +217,19 @@ public class ActivityAlbum extends AppCompatActivity implements View.OnClickList
                         ActivityAlbum.this.tvEntryEmoji.setVisibility(View.VISIBLE);
                     }
                 }
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
                 dialogInterface.dismiss();
             }
         }).setNegativeButton(getString(R.string.no), new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialogInterface, int i2) {
+                if ( interstitialAd.isReady() )
+                {
+                    interstitialAd.showAd();
+                }
                 dialogInterface.dismiss();
             }
         }).create().show();
@@ -229,5 +249,55 @@ public class ActivityAlbum extends AppCompatActivity implements View.OnClickList
             return;
         }
         this.tvEntryEmoji.setVisibility(View.GONE);
+    }
+    void createInterstitialAd()
+    {
+        interstitialAd = new MaxInterstitialAd( "1207a2f2caaf1728", this );
+        interstitialAd.setListener( this );
+
+        // Load the first ad
+        interstitialAd.loadAd();
+    }
+    @Override
+    public void onAdLoaded(MaxAd ad) {
+        retryAttempt = 0;
+
+    }
+
+    @Override
+    public void onAdDisplayed(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdHidden(MaxAd ad) {
+        interstitialAd.loadAd();
+
+    }
+
+    @Override
+    public void onAdClicked(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdLoadFailed(String adUnitId, MaxError error) {
+        retryAttempt++;
+        long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, retryAttempt ) ) );
+
+        new Handler().postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                interstitialAd.loadAd();
+            }
+        }, delayMillis );
+    }
+
+    @Override
+    public void onAdDisplayFailed(MaxAd ad, MaxError error) {
+        interstitialAd.loadAd();
+
     }
 }

@@ -12,6 +12,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 
+import android.os.Handler;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,6 +32,10 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.ItemTouchHelper;
 
+import com.applovin.mediation.MaxAd;
+import com.applovin.mediation.MaxAdListener;
+import com.applovin.mediation.MaxError;
+import com.applovin.mediation.ads.MaxInterstitialAd;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.animation.GlideAnimation;
 import com.bumptech.glide.request.target.SimpleTarget;
@@ -59,9 +64,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 
-public class ActivityEmojiMaker extends Activity implements View.OnClickListener, View.OnTouchListener, AdapterView.OnItemClickListener {
+public class ActivityEmojiMaker extends Activity implements View.OnClickListener, View.OnTouchListener, AdapterView.OnItemClickListener, MaxAdListener {
     private static String nameShape;
 
     private ArrayList<Integer> arrRateGif;
@@ -106,7 +112,8 @@ public class ActivityEmojiMaker extends Activity implements View.OnClickListener
     private List<ImageView> listSelectTab = new ArrayList();
     private List<ImageView> listChoice = new ArrayList();
     int CAMERA_PIC_REQUEST = 589;
-
+    private MaxInterstitialAd interstitialAd;
+    private int retryAttempt;
     private void findViews() {
         this.rltEmoji = (RelativeLayout) findViewById(R.id.rltEmoji);
         findViewById(R.id.imgSaveEmoji).setOnClickListener(this);
@@ -306,6 +313,8 @@ public class ActivityEmojiMaker extends Activity implements View.OnClickListener
         findViews();
         init();
         setupDialog();
+        createInterstitialAd();
+
     }
 
 
@@ -596,6 +605,56 @@ public class ActivityEmojiMaker extends Activity implements View.OnClickListener
     public void onItemClick(AdapterView<?> adapterView, View view, int i, long j) {
         this.positionLv = i;
         this.emojiAdapter.dataChanges(this.listEmojiAll.get(i), i, nameShape, ItemTouchHelper.Callback.DEFAULT_DRAG_ANIMATION_DURATION);
+    }
+    void createInterstitialAd()
+    {
+        interstitialAd = new MaxInterstitialAd( "24ad40ba8567d809", this );
+        interstitialAd.setListener( this );
+
+        // Load the first ad
+        interstitialAd.loadAd();
+    }
+
+    @Override
+    public void onAdLoaded(MaxAd ad) {
+        retryAttempt = 0;
+    }
+
+    @Override
+    public void onAdDisplayed(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdHidden(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdClicked(MaxAd ad) {
+
+    }
+
+    @Override
+    public void onAdLoadFailed(String adUnitId, MaxError error) {
+        retryAttempt++;
+        long delayMillis = TimeUnit.SECONDS.toMillis( (long) Math.pow( 2, Math.min( 6, retryAttempt ) ) );
+
+        new Handler().postDelayed(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                interstitialAd.loadAd();
+            }
+        }, delayMillis );
+
+    }
+
+    @Override
+    public void onAdDisplayFailed(MaxAd ad, MaxError error) {
+        interstitialAd.loadAd();
+
     }
 
 
